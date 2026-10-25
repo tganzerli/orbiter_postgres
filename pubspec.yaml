@@ -3,23 +3,20 @@ description: >
   PostgreSQL kit for orbiter: the pieces for using it together
   with slingshot_postgres (a per-request row-level-security transaction
   middleware and a prefix tsquery builder).
-version: 0.1.4
-publish_to: none
+version: 0.1.5
 
 repository: https://github.com/tganzerli/orbiter_postgres
+topics:
+  - postgres
+  - rls
+  - backend
 
 environment:
   sdk: ^3.6.0
 
 dependencies:
-  orbiter:
-    git:
-      url: https://github.com/tganzerli/orbiter
-      ref: v0.1.2
-  slingshot_postgres:
-    git:
-      url: https://github.com/tganzerli/slingshot_postgres
-      ref: v0.1.4
+  orbiter: ^0.1.3
+  slingshot_postgres: ^0.1.5
   meta: ^1.15.0
 
 dev_dependencies:

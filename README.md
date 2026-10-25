@@ -9,15 +9,11 @@ transaction (`rlsTransaction`), the same transaction opened by a repository or
 use case (`withTenantTransaction`), and a prefix search builder
 (`prefixTsQuery`).
 
-**Experimental, not on pub.dev yet.** Install by `git` reference to a tag; the
-framework and the connector come with it:
+Experimental (pre-1.0). Install from pub.dev; the framework and the connector
+come with it:
 
-```yaml
-dependencies:
-  orbiter_postgres:
-    git:
-      url: https://github.com/tganzerli/orbiter_postgres
-      ref: v0.1.4
+```sh
+dart pub add orbiter_postgres
 ```
 
 The connector ships its native library pre-built and needs `libpq` at run time;

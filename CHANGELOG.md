@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5
+
+First release on pub.dev. Depends on `orbiter` `^0.1.3` and `slingshot_postgres` `^0.1.5` from pub.dev instead
+of by `git`. No API change.
+
 ## 0.1.4
 
 Renamed from `dart_backend_framework_postgres` to `orbiter_postgres`; the repository moved with it. No API change: only the package
