@@ -7,8 +7,8 @@ library;
 
 // ignore_for_file: unused_local_variable
 
-import 'package:dart_backend_framework/dart_backend_framework.dart';
-import 'package:dart_backend_framework_postgres/dart_backend_framework_postgres.dart';
+import 'package:orbiter/orbiter.dart';
+import 'package:orbiter_postgres/orbiter_postgres.dart';
 import 'package:test/test.dart';
 
 void main() {

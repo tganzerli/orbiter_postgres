@@ -1,7 +1,7 @@
-/// PostgreSQL kit for `dart_backend_framework`.
+/// PostgreSQL kit for `orbiter`.
 ///
 /// For applications that use the framework together with
-/// `dart_db_connector_postgres`. The framework has no database dependency;
+/// `slingshot_postgres`. The framework has no database dependency;
 /// this package holds the PostgreSQL-specific pieces for using the two together.
 library;
 

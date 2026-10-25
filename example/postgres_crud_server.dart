@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dart_backend_framework/dart_backend_framework.dart';
-import 'package:dart_db_connector_postgres/dart_db_connector_postgres.dart';
+import 'package:orbiter/orbiter.dart';
+import 'package:slingshot_postgres/slingshot_postgres.dart';
 
 /// Runnable example wiring [BackendServer], [Pipeline] and [Router] to the
-/// native [PostgresConnectionPool] of `dart_db_connector_postgres`.
+/// native [PostgresConnectionPool] of `slingshot_postgres`.
 ///
 /// It shows:
 /// 1. The connection pool injected into the [RequestContext] (no Zone).
@@ -58,7 +58,7 @@ void main(List<String> args) async {
   router.get('/health', (request) {
     return Response.json({
       'status': 'healthy',
-      'framework': 'dart_backend_framework',
+      'framework': 'orbiter',
       'pool': {
         'maxSize': poolSize,
       },

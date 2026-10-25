@@ -15,9 +15,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dart_backend_framework/dart_backend_framework.dart';
-import 'package:dart_backend_framework_postgres/dart_backend_framework_postgres.dart';
-import 'package:dart_db_connector_postgres/dart_db_connector_postgres.dart';
+import 'package:orbiter/orbiter.dart';
+import 'package:orbiter_postgres/orbiter_postgres.dart';
+import 'package:slingshot_postgres/slingshot_postgres.dart';
 import 'package:test/test.dart';
 
 const _adminConn =

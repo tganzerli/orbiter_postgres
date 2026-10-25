@@ -1,8 +1,8 @@
-# dart_backend_framework_postgres
+# orbiter_postgres
 
-PostgreSQL kit for [`dart_backend_framework`](https://github.com/tganzerli/dart_backend_framework),
+PostgreSQL kit for [`orbiter`](https://github.com/tganzerli/orbiter),
 for applications that use it together with
-[`dart_db_connector_postgres`](https://github.com/tganzerli/dart_db_connector_postgres).
+[`slingshot_postgres`](https://github.com/tganzerli/slingshot_postgres).
 The framework has no database dependency; this package holds the
 PostgreSQL-specific pieces for using the two together: a per-request RLS
 transaction (`rlsTransaction`), the same transaction opened by a repository or
@@ -14,10 +14,10 @@ framework and the connector come with it:
 
 ```yaml
 dependencies:
-  dart_backend_framework_postgres:
+  orbiter_postgres:
     git:
-      url: https://github.com/tganzerli/dart_backend_framework_postgres
-      ref: v0.1.3
+      url: https://github.com/tganzerli/orbiter_postgres
+      ref: v0.1.4
 ```
 
 The connector ships its native library pre-built and needs `libpq` at run time;

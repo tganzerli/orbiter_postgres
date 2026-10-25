@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+Renamed from `dart_backend_framework_postgres` to `orbiter_postgres`; the repository moved with it. No API change: only the package
+name, the library import (`package:orbiter_postgres/orbiter_postgres.dart`) and the dependency key change. Depends on `orbiter` and
+`slingshot_postgres`, the renamed framework and connector.
+
 ## 0.1.3
 
 Consumed by `git` reference to the tag `v0.1.3`. Depends on `dart_backend_framework` 0.1.0 and

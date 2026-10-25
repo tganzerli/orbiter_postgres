@@ -5,7 +5,7 @@ library;
 
 import 'dart:math';
 
-import 'package:dart_backend_framework_postgres/src/fts/prefix_ts_query.dart';
+import 'package:orbiter_postgres/src/fts/prefix_ts_query.dart';
 import 'package:test/test.dart';
 
 /// Every non-null output must match this: quoted prefix lexemes joined by
