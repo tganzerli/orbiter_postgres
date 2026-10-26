@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+Documentation only: README rewritten, the CRUD server example renamed to `example/main.dart`, dartdoc on the
+exception constructors. No API change.
+
 ## 0.1.5
 
 First release on pub.dev. Depends on `orbiter` `^0.1.3` and `slingshot_postgres` `^0.1.5` from pub.dev instead

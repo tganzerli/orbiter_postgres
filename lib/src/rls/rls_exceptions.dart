@@ -22,6 +22,7 @@ sealed class RlsException implements Exception {
 /// Applying the tenant setting failed. The transaction was rolled back and the
 /// connection was already returned to the pool.
 final class RlsContextException extends RlsException {
+  /// Wraps [cause], raised while applying the setting for [tenantId].
   const RlsContextException(
     super.tenantId,
     super.cause,
@@ -36,8 +37,10 @@ final class RlsContextException extends RlsException {
 /// already has the response and the failure only reaches the server-side
 /// `onError`.
 final class RlsCommitException extends RlsException {
+  /// Whether the response was already written when the commit failed.
   final bool afterResponse;
 
+  /// Wraps [cause], raised by the commit of [tenantId]'s transaction.
   const RlsCommitException(
     super.tenantId,
     super.cause,
@@ -52,6 +55,7 @@ final class RlsCommitException extends RlsException {
 /// Not an [RlsException]: there is no tenant and no underlying cause, and that
 /// hierarchy is sealed.
 final class TenantRequiredException implements Exception {
+  /// Creates the exception; it carries no data.
   const TenantRequiredException();
 
   @override

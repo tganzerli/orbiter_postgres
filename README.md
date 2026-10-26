@@ -1,23 +1,51 @@
 # orbiter_postgres
 
-PostgreSQL kit for [`orbiter`](https://github.com/tganzerli/orbiter),
-for applications that use it together with
-[`slingshot_postgres`](https://github.com/tganzerli/slingshot_postgres).
-The framework has no database dependency; this package holds the
-PostgreSQL-specific pieces for using the two together: a per-request RLS
-transaction (`rlsTransaction`), the same transaction opened by a repository or
-use case (`withTenantTransaction`), and a prefix search builder
-(`prefixTsQuery`).
+[![pub package](https://img.shields.io/pub/v/orbiter_postgres.svg)](https://pub.dev/packages/orbiter_postgres)
+[![pub points](https://img.shields.io/pub/points/orbiter_postgres)](https://pub.dev/packages/orbiter_postgres/score)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Experimental (pre-1.0). Install from pub.dev; the framework and the connector
-come with it:
+**Multi-tenant PostgreSQL for Dart backends: one interceptor gives every request its own row-level-security
+transaction, so a query can only see its tenant's rows.**
+
+Row-level security lets PostgreSQL itself filter every query by tenant, but only if each request runs inside a
+transaction with the tenant set, and that transaction always ends: committed before a success response, rolled
+back on errors, and its connection returned to the pool even when the client disconnects mid-stream. Getting that
+right by hand in every handler is where tenant data leaks come from. This package does it once, as an interceptor
+for [`orbiter`](https://pub.dev/packages/orbiter) over the native pool of
+[`slingshot_postgres`](https://pub.dev/packages/slingshot_postgres): the tenant comes from your authentication, the
+setting is bound as a parameter, and the handler just runs its queries.
+
+## Features
+
+- **`rlsTransaction`:** an interceptor that opens one transaction per request, applies the tenant with
+  `set_config(..., true)` as its first statement and hands the handler an executor pinned to it.
+- **Deterministic end:** `COMMIT` before a buffered response is written, so a failed commit never turns into a `200`
+  already sent; rollback on `4xx`/`5xx`, on exceptions or on demand; streamed bodies finish their transaction after
+  the last byte.
+- **Fails closed:** no tenant means no connection and no handler call; an exhausted pool answers `503` with
+  `Retry-After`; errors carry the tenant without leaking the server message.
+- **`withTenantTransaction`:** the same transaction opened by a repository or use case, when a request has to call
+  something slow outside it.
+- **`prefixTsQuery`:** turns free text into a safe prefix `tsquery` for search-as-you-type over a GIN index.
+- **Testable without a database:** `rlsTransactionOn` runs the same policy over any `UnitOfWork` factory.
+
+## Install
 
 ```sh
 dart pub add orbiter_postgres
 ```
 
-The connector ships its native library pre-built and needs `libpq` at run time;
-see its README for AOT and container builds.
+The framework and the connector come with it. Experimental (pre-1.0). The connector ships its native library
+pre-built and needs `libpq` at run time; see its README for AOT and container builds.
+
+## The family
+
+| Package | Role |
+|---|---|
+| [`orbiter_postgres`](https://pub.dev/packages/orbiter_postgres) | This kit. |
+| [`orbiter`](https://pub.dev/packages/orbiter) | HTTP backend framework, no database dependency. |
+| [`slingshot_postgres`](https://pub.dev/packages/slingshot_postgres) | PostgreSQL driver over `libpq`, with a native connection pool. |
+| [`slingshot`](https://pub.dev/packages/slingshot) | The contract every slingshot driver implements. |
 
 ## `rlsTransaction`: one RLS transaction per request
 
@@ -225,7 +253,7 @@ One regular expression pass over the input. Not measured.
 
 ## Example: CRUD server
 
-`example/postgres_crud_server.dart` wires `BackendServer`, `Pipeline` and `Router` to the native pool. It
+`example/main.dart` wires `BackendServer`, `Pipeline` and `Router` to the native pool. It
 expects a `users` table:
 
 ```sql
@@ -234,7 +262,7 @@ CREATE TABLE users (id serial PRIMARY KEY, name text NOT NULL, email text NOT NU
 
 ```bash
 POSTGRES_HOST=localhost POSTGRES_DB=teste POSTGRES_USER=postgres POSTGRES_PASSWORD=123 \
-  dart run example/postgres_crud_server.dart
+  dart run example/main.dart
 ```
 
 Endpoints: `GET /health`, `GET /api/v1/users` (first 50), `GET /api/v1/users/:id`, `POST /api/v1/users`
@@ -243,6 +271,14 @@ messages are logged on the server only. The server shuts down on `SIGINT` and `S
 
 `test/integration/postgres_live_test.dart` runs against the same database and skips when it, or the native
 library, is unavailable.
+
+## Benchmarks and research
+
+The project started as an MBA thesis in Software Engineering at the University of São Paulo (USP). The
+cross-language benchmark suite, its results and the evaluated code are public at
+[tganzerli/dart_db_connector](https://github.com/tganzerli/dart_db_connector) (see
+[`benchmarks/RESULTS.md`](https://github.com/tganzerli/dart_db_connector/blob/main/benchmarks/RESULTS.md)). The
+cost of this kit's middleware has not been measured.
 
 ## License
 

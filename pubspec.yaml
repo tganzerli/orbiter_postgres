@@ -3,7 +3,7 @@ description: >
   PostgreSQL kit for orbiter: the pieces for using it together
   with slingshot_postgres (a per-request row-level-security transaction
   middleware and a prefix tsquery builder).
-version: 0.1.5
+version: 0.1.6
 
 repository: https://github.com/tganzerli/orbiter_postgres
 topics:

@@ -231,6 +231,6 @@ Response _error(int status, String message) =>
 /// the client: exception text and the Postgres `serverMessage` can carry table
 /// names, constraints and values from other rows.
 Response _failure(String operation, Object error, StackTrace stackTrace) {
-  stderr.writeln('[postgres_crud_server] failed to $operation: $error');
+  stderr.writeln('[orbiter_postgres example] failed to $operation: $error');
   return _error(500, 'Internal error: could not $operation');
 }
