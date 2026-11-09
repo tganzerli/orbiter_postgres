@@ -15,7 +15,8 @@ import 'package:slingshot_postgres/slingshot_postgres.dart';
 void main(List<String> args) async {
   // 1. Configuration from environment variables
   final host = Platform.environment['POSTGRES_HOST'] ?? 'localhost';
-  final dbPort = int.tryParse(Platform.environment['POSTGRES_PORT'] ?? '') ?? 5432;
+  final dbPort =
+      int.tryParse(Platform.environment['POSTGRES_PORT'] ?? '') ?? 5432;
   final dbName = Platform.environment['POSTGRES_DB'] ?? 'teste';
   final user = Platform.environment['POSTGRES_USER'] ?? 'postgres';
   final password = Platform.environment['POSTGRES_PASSWORD'] ?? '123';
@@ -187,10 +188,9 @@ void main(List<String> args) async {
       .add(requestLogger())
       // Puts the pool into the RequestContext
       .add((request, next) {
-        request.context.set<PostgresConnectionPool>(pool);
-        return next(request);
-      })
-      .addHandler(router.handler);
+    request.context.set<PostgresConnectionPool>(pool);
+    return next(request);
+  }).addHandler(router.handler);
 
   // 5. BackendServer over dart:io
   final server = await BackendServer.bind(

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.7
+
+- Migrations and seeds: `Migrator` and `Seeder` apply numbered `.sql` files (`SqlScript`, from a directory or
+  built in memory) once each, in numeric version order, each file sent whole in one transaction with its
+  bookkeeping row. Applied files are checked by CRC-32 before anything runs, an advisory lock serialises
+  concurrent runs, and `-- orbiter:no-transaction` opts a file out of the transaction. Failures throw
+  `MigrationException`.
+- SQL-first queries: `query`, `queryFirst` and `scalar` as an extension on `PostgresQueryExecutorContract`, with
+  `@name` placeholders rewritten to `$N` once per SQL text (cached) and parameter types inferred from Dart values
+  (`inferParam`). The result set is always released. `namedStmt` returns the positional record for
+  `PostgresRepository`. `NamedSql` exposes the rewrite. No change to existing API.
+
 ## 0.1.6
 
 Documentation only: README rewritten, the CRUD server example renamed to `example/main.dart`, dartdoc on the

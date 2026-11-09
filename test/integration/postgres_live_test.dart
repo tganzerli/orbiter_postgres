@@ -39,7 +39,8 @@ InterceptorFunction borrowConnection(PostgresConnectionPool pool) {
       await done.future;
     });
     // Acquire failures surface here, before any hook is registered.
-    final exec = await Future.any([ready.future, held.then((_) => ready.future)]);
+    final exec =
+        await Future.any([ready.future, held.then((_) => ready.future)]);
     request.addCleanupHook(() {
       done.complete();
       return held;
@@ -83,7 +84,8 @@ void main() {
       await p.start();
       pool = p;
     } on Object catch (e) {
-      skipReason = 'Postgres or native library unavailable ($e) — start PostgreSQL at localhost:5432';
+      skipReason =
+          'Postgres or native library unavailable ($e) — start PostgreSQL at localhost:5432';
     }
   });
 
@@ -116,8 +118,8 @@ void main() {
         })
         ..get('/tenant/current', (request) async {
           final exec = request.context.get<RequestConnection>().exec;
-          final tenant =
-              await scalar(exec, "SELECT current_setting('app.current_tenant_id', true) AS v");
+          final tenant = await scalar(exec,
+              "SELECT current_setting('app.current_tenant_id', true) AS v");
           return Response.ok(body: tenant ?? '');
         })
         ..get('/stream', (request) {
@@ -134,7 +136,8 @@ void main() {
         });
 
       server = await BackendServer.bind(
-        handler: Pipeline().add(borrowConnection(pool!)).addHandler(router.handler),
+        handler:
+            Pipeline().add(borrowConnection(pool!)).addHandler(router.handler),
         address: InternetAddress.loopbackIPv4,
         port: 0,
         onError: (error, stackTrace, request) {},
@@ -167,7 +170,9 @@ void main() {
       return (res.statusCode, await utf8.decoder.bind(res).join());
     }
 
-    liveTest('handler exception returns the connection to the pool with session reset', () async {
+    liveTest(
+        'handler exception returns the connection to the pool with session reset',
+        () async {
       final (failStatus, _) = await get('/tenant/clinic-a/fail');
       expect(failStatus, 500);
 
@@ -179,7 +184,8 @@ void main() {
       await expectPoolFree(pool!);
     });
 
-    liveTest('client abort during the handler still returns the connection', () async {
+    liveTest('client abort during the handler still returns the connection',
+        () async {
       final aborting = HttpClient();
       final req = await aborting.getUrl(base.resolve('/tenant/clinic-a/slow'));
       unawaited(req.close().then<void>((_) {}, onError: (_) {}));
@@ -194,14 +200,17 @@ void main() {
       await expectPoolFree(pool!);
     });
 
-    liveTest('streamed body keeps the connection until fully written', () async {
+    liveTest('streamed body keeps the connection until fully written',
+        () async {
       final (status, body) = await get('/stream');
       expect(status, 200);
       expect(body, '1;2;3;');
       await expectPoolFree(pool!);
     });
 
-    liveTest('concurrent requests, half failing, all answer and leave the pool free', () async {
+    liveTest(
+        'concurrent requests, half failing, all answer and leave the pool free',
+        () async {
       final results = await Future.wait([
         for (var i = 0; i < 20; i++)
           get(i.isEven ? '/tenant/t$i/fail' : '/tenant/current'),

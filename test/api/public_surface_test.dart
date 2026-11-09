@@ -9,13 +9,14 @@ library;
 
 import 'package:orbiter/orbiter.dart';
 import 'package:orbiter_postgres/orbiter_postgres.dart';
+import 'package:slingshot_postgres/slingshot_postgres.dart';
 import 'package:test/test.dart';
 
 void main() {
   test(
-      'barrel exposes the RLS middleware, the repository mode and prefixTsQuery',
+      'barrel exposes the RLS middleware, the repository mode, prefixTsQuery, SQL-first queries and migrations',
       () {
-    // Types (7)
+    // Types (7 + 5)
     expect(RlsException, isA<Type>());
     expect(RlsContextException, isA<Type>());
     expect(RlsCommitException, isA<Type>());
@@ -24,16 +25,30 @@ void main() {
     expect(TenantResolver, isA<Type>());
     expect(TenantRequiredException, isA<Type>());
 
-    // Functions (6)
+    expect(NamedSql, isA<Type>());
+    expect(Migrator, isA<Type>());
+    expect(Seeder, isA<Type>());
+    expect(SqlScript, isA<Type>());
+    expect(MigrationException, isA<Type>());
+
+    // Functions (6 + 2)
     expect(rlsTransaction, isA<Function>());
     expect(rlsTransactionOn, isA<Function>());
     expect(commitOnSuccess, isA<Function>());
     expect(prefixTsQuery, isA<Function>());
     expect(withTenantTransaction, isA<Function>());
     expect(withTenantTransactionOn, isA<Function>());
+    expect(inferParam, isA<Function>());
+    expect(namedStmt, isA<Function>());
 
     // Extension `RlsRequest`, referenced by use in a body that never runs.
     RlsTransaction rlsOf(Request request) => request.rls;
     expect(rlsOf, isA<Function>());
+
+    // Extension `SqlFirstQueries`, referenced by use in a body that never runs.
+    Future<int?> countOf(PostgresQueryExecutorContract exec) =>
+        exec.scalar<int>('SELECT count(*) FROM t WHERE org = @org',
+            params: {'org': 1});
+    expect(countOf, isA<Function>());
   });
 }

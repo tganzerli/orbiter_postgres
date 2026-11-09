@@ -32,6 +32,7 @@ jobs:
       - name: Install libpq
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpq5
       - run: dart pub get
+      - run: dart format --output=none --set-exit-if-changed .
       - run: dart analyze --fatal-infos
       - name: Tests against a live server (stress suite excluded)
         # --concurrency=1: the suites create schemas and roles in one shared database.

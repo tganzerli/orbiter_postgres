@@ -26,6 +26,10 @@ setting is bound as a parameter, and the handler just runs its queries.
   `Retry-After`; errors carry the tenant without leaking the server message.
 - **`withTenantTransaction`:** the same transaction opened by a repository or use case, when a request has to call
   something slow outside it.
+- **SQL-first queries:** `query`, `queryFirst` and `scalar` on any executor, with `@name` placeholders and inferred
+  parameter types; the result set is always released.
+- **Migrations and seeds:** `Migrator` and `Seeder` apply numbered `.sql` files once each, one transaction per
+  file, with a checksum of every applied file and a lock against concurrent runs.
 - **`prefixTsQuery`:** turns free text into a safe prefix `tsquery` for search-as-you-type over a GIN index.
 - **Testable without a database:** `rlsTransactionOn` runs the same policy over any `UnitOfWork` factory.
 
@@ -126,9 +130,16 @@ session reset on return. The cost of this middleware has not been measured.
 
 `test/rls_middleware_test.dart`, `test/tenant_transaction_test.dart` and
 `test/prefix_ts_query_test.dart` need no database. The integration tests (`test/integration/postgres_live_test.dart`,
-`rls_live_test.dart` and `prefix_ts_query_live_test.dart`) need PostgreSQL at
+`rls_live_test.dart`, `prefix_ts_query_live_test.dart` and
+`multi_worker_pool_live_test.dart`) need PostgreSQL at
 `localhost:5432` (`dbname=teste user=postgres password=123`).
 `prefix_ts_query_live_test.dart` creates no schema or role.
+`multi_worker_pool_live_test.dart` runs a `MultiWorkerServer` whose workers each
+open their own pool in the setup and close it in `onShutdown`, and counts the
+connections in `pg_stat_activity`. It also pins down what happens when a worker
+dies: the other workers and their pools are unaffected, but nothing closes the
+dead worker's pool (`onShutdown` does not run), so its connections stay open
+in the database until the process exits.
 `rls_live_test.dart` uses a superuser because it creates schema `rls_mw` and
 roles `rls_mw_owner`/`rls_mw_app`, so do not run two instances at once:
 
@@ -205,6 +216,103 @@ sends.
 for tests without the native library or a database. The rules above about the
 database role, `FORCE ROW LEVEL SECURITY` and an authenticated tenant apply
 here too.
+
+## SQL-first queries: `query`, `queryFirst`, `scalar`
+
+An extension on `PostgresQueryExecutorContract`, so it works the same on a pooled connection
+(`withPostgresConnection`), inside `withTransaction` and on `request.rls.executor` / `tx.executor`:
+
+```dart
+final users = await exec.query(
+  'SELECT id, name FROM users WHERE org = @org AND active = @active',
+  User.fromRow, // User Function(PostgresResultRow row)
+  params: {'org': orgId, 'active': true},
+);
+
+final user = await exec.queryFirst(
+  'SELECT id, name FROM users WHERE id = @id', User.fromRow, params: {'id': id});
+
+final total = await exec.scalar<int>('SELECT count(*) FROM users WHERE org = @org',
+    params: {'org': orgId});
+```
+
+The mapper gets the row itself (`row['name']`, `row.getInt('id')`); a `fromJson` constructor can take
+`row.toMap()`. The result set is released when mapping ends, also when the mapper throws.
+
+**Placeholders.** `@name` is rewritten to `$1`, `$2`, … once per SQL text and cached (256 texts per
+isolate). A name used twice maps to the same `$N`. Nothing is rewritten inside string literals (`'...'`,
+`E'...'`), quoted identifiers, `--` and `/* */` comments or dollar-quoted bodies, nor in the operators
+`@>`, `<@`, `@@` and `@-@`. A missing value throws `ArgumentError` before the query is sent. SQL that
+mixes `$1` with `@name` is rejected. Write the absolute-value operator as `@ x` or `abs(x)`: `@x` is a
+placeholder.
+
+**Parameter types.**
+
+| Dart value  | Sent as                                      |
+|-------------|----------------------------------------------|
+| `Param`     | itself                                       |
+| `int`       | `int8`                                       |
+| `double`    | `float8`                                     |
+| `bool`      | `bool`                                       |
+| `String`    | `text`                                       |
+| `DateTime`  | `timestamptz`                                |
+| `Uint8List` | `bytea`                                      |
+| `null`      | NULL with no type; taken from context        |
+
+A `String` is `text`, so a `uuid`, `jsonb`, `numeric`, `inet` or enum column needs a cast in the SQL
+(`WHERE id = @id::uuid`) or an explicit parameter (`{'id': Param.uuid(id)}`). Maps and lists are not
+inferred: pass `Param.jsonb(jsonEncode(value))`. Any other type throws `ArgumentError`. A `null` takes its type
+from where it is used (an `INSERT` column, a comparison, an operator); where nothing fixes it (`@x IS NULL`, a
+polymorphic argument such as `pg_typeof(@x)`) the server answers "could not determine data type": cast it (`@x::int8`) or pass
+`Param.nullValue(PostgresOid.int8)`.
+
+Keys in `params` that the SQL does not use are ignored, so one map can serve several queries. The exception is
+SQL with no placeholder at all: non-empty `params` there throws, because it usually means `$1` was written
+where `@name` was meant.
+
+For a `PostgresRepository`, `namedStmt(sql, params)` returns the positional `(sql, params)` record its
+`*SqlParams` hooks expect.
+
+### Cost
+
+A hash lookup of the SQL text and one `Param` per value on each call. Not measured yet.
+
+## Migrations and seeds: `Migrator`, `Seeder`
+
+```dart
+final applied = await Migrator(pool).run(await SqlScript.loadDirectory('migrations'));
+await Seeder(pool).run(await SqlScript.loadDirectory('seeds'));
+```
+
+Files are named `<version>_<description>.sql` (`001_init.sql`, `2_users.sql`, `10_index.sql`) and run in
+numeric order of the version, each at most once. `loadDirectory` reads the `*.sql` files directly inside the
+directory; to ship the SQL inside an AOT binary, build the list yourself:
+`[SqlScript('001_init.sql', initSql), …]`.
+
+- **Whole file, one transaction.** The file goes to the server in one call, so functions, `DO $$ … $$` blocks
+  and `;` inside literals work as written. It runs in a transaction together with its row in the bookkeeping
+  table: if any statement fails, nothing of that file stays, the error is a `MigrationException` naming the
+  file (with the server error as `cause`), and the run stops. Files applied before it in the same run stay.
+  Do not put `COMMIT`, `ROLLBACK` or `END` in such a file: it ends the transaction early, and PostgreSQL then
+  commits the rest of the file on its own. The run detects it and stops without recording the file, whose
+  statements most likely took effect; check the database before running again.
+- **Outside a transaction.** A file whose first non-blank line is `-- orbiter:no-transaction` (surrounding spaces ignored) runs
+  without `BEGIN`, for statements PostgreSQL refuses inside one (`CREATE INDEX CONCURRENTLY`). If it fails
+  halfway, its earlier statements may have taken effect; keep such files to a single statement. If the file
+  succeeds but its bookkeeping row cannot be written, the error says so: the file would run again next time.
+- **Applied files must not change.** Each applied file is recorded with its CRC-32 (line endings normalised).
+  Before anything runs, every recorded file is checked against the one given: an edited file, or a recorded
+  version missing from the set, throws `MigrationException`. Change the schema with a new file.
+- **Concurrent runs.** A PostgreSQL advisory lock keyed on the bookkeeping table serialises runs, so several
+  instances starting at once apply each file once. The run releases the lock on every exit; if the process
+  dies, the server releases it when the connection closes.
+- **Bookkeeping tables.** `orbiter_migrations` and `orbiter_seeds` (`version`, `name`, `checksum`,
+  `applied_at`), created when missing; pass `table:` to use another name, optionally schema-qualified.
+- **Out of order.** A new file with a version below the highest applied one (two branches merged) is applied.
+- **No `down`.** Undo a change with a new file.
+
+`Seeder` follows the same rules with its own table, so seeds version independently of the schema. "Once" is per
+file: write seed SQL that tolerates existing rows (`ON CONFLICT DO NOTHING`) when they may already be there.
 
 ## `prefixTsQuery`: prefix search from free text
 
